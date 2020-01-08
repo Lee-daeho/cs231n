@@ -80,7 +80,9 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        n1_scores = X.dot(W1) + b1 #X->(N,D), W1->(D,H), n1_scores->(N,H)
+        relu = np.maximum(n1_scores,0)
+        scores = relu.dot(W2) + b2 #n1_scores->(N,H), W2->(H,C), scores->(N,C)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -98,10 +100,13 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        scores = scores - np.max(scores)
 
-        # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
+        scores_exp = np.exp(scores)
+        scores_expsum = np.sum(scores_exp,axis = 1)
+        scores_correct = scores_exp[range(N),y]
+        loss = scores_correct/scores_expsum
+        loss = np.sum(-np.log(loss))/N + reg*(np.sum(W1*W1)+np.sum(W2*W2))
         # Backward pass: compute gradients
         grads = {}
         #############################################################################
@@ -111,8 +116,22 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        s = np.divide(scores_exp,scores_expsum.reshape(N,1))
+        s[range(N),y] = -(scores_expsum - scores_correct)/scores_expsum #or you can make it by "s[range(N),y] = scores_correct/scores_expsum - 1" they works in same way
+        s /= N
+        db2 = np.sum(s,axis=0)
+        dW2 = relu.T.dot(s)
 
+        hidden = s.dot(W2.T)
+        hidden[relu==0]=0
+
+        dW1 = X.T.dot(hidden)
+        db1 = np.sum(hidden,axis=0)
+
+        grads['W2'] = dW2 +2*reg*W2
+        grads['b2'] = db2
+        grads['W1'] = dW1+2*reg*W1
+        grads['b1'] = db1
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         return loss, grads
@@ -155,8 +174,10 @@ class TwoLayerNet(object):
             # them in X_batch and y_batch respectively.                             #
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-            pass
+            
+            batch_index = np.random.choice(num_train, batch_size)
+            X_batch = X[batch_index]
+            y_batch = y[batch_index]
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -171,13 +192,14 @@ class TwoLayerNet(object):
             # stored in the grads dictionary defined above.                         #
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-            pass
+  
+            for key in self.params:
+                self.params[key] -= learning_rate * grads[key]
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            if verbose and it % 100 == 0:
-                print('iteration %d / %d: loss %f' % (it, num_iters, loss))
+            #if verbose and it % 100 == 0:
+             #   print('iteration %d / %d: loss %f' % (it, num_iters, loss))
 
             # Every epoch, check train and val accuracy and decay learning rate.
             if it % iterations_per_epoch == 0:
@@ -217,8 +239,7 @@ class TwoLayerNet(object):
         # TODO: Implement this function; it should be VERY simple!                #
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
+        y_pred = np.argmax(self.loss(X),axis = 1)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
